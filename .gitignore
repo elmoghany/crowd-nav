@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+residual_predictor.pt
+HF_README.md
