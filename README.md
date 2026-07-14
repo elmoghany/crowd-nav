@@ -5,7 +5,7 @@ A **drop-in, simulator-free controller** that makes a mobile robot navigate a cr
 predictor (a NeuRoSFM residual trained on real robot–human interaction data), and plans around them
 with a short-horizon MPC. In benchmarks the same planner using this predictor perturbs the crowd
 **~27% less** than using a constant-velocity or social-force model, and ~2× less than reactive
-controllers (ORCA / social-force). Results + videos: **https://elmoghany.com/crowd-nav-2**.
+controllers (ORCA / social-force). Results + videos: **https://elmoghany.com/crowd-nav**.
 
 This repo is everything you need to run it on a robot: **one dependency-light file**
 (`peroi_controller.py`, needs only `torch` + `numpy`) plus the trained weights
@@ -122,7 +122,7 @@ The predictor is a NeuRoSFM residual (`ŷ = SocialForce + learned_correction`) t
 **PeRoI** robot–human interaction dataset (3 robot conditions, per-person avoidance/neutral/attraction
 labels). On held-out real recordings it cuts pedestrian-prediction ADE ~20% over constant-velocity and
 ~43% over social-force, and its predicted robot-effect is larger for people humans labelled *influenced*
-(a causal check). Full write-up, metrics, and per-metric videos: **https://elmoghany.com/crowd-nav-2**.
+(a causal check). Full write-up, metrics, and per-metric videos: **https://elmoghany.com/crowd-nav**.
 Known limitation: trained on slow-robot data, so it is out-of-distribution (degrades) in very dense
 fast crowds — keep `v_max` modest and your safety layer active.
 
