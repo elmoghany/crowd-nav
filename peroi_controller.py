@@ -1,7 +1,7 @@
 """
 PeRoI controller — standalone, simulator-free.
 
-Drop this ONE file (plus the weights `residual_predictor.pt`) onto a real robot. It has no MuJoCo /
+Drop this ONE file (plus the weights `residual_predictor_k1.pt`) onto a real robot. It has no MuJoCo /
 gym / project dependency — only `torch` and `numpy`. It wraps the PeRoI action-conditioned pedestrian
 predictor (a NeuRoSFM residual trained on real robot–human interaction data) in a holonomic
 velocity-grid MPC: every replan it enumerates candidate robot velocities, predicts how each nearby
@@ -11,7 +11,7 @@ progress against predicted clearance (and, optionally, hazard-zone avoidance and
 USAGE (real-robot control loop)
 -------------------------------
     from peroi_controller import PeRoIController
-    ctrl = PeRoIController("residual_predictor.pt", robot_radius=0.30, ped_radius=0.25, v_max=0.8)
+    ctrl = PeRoIController("residual_predictor_k1.pt", robot_radius=0.30, ped_radius=0.25, v_max=0.8)
     ctrl.reset()
     # ... your loop, ideally ~4-10 Hz ...
     while running:
@@ -45,7 +45,7 @@ FEAT_DIM_TREAT = FEAT_DIM_NOTREAT + 3                # = 22  (robot-condition on
 
 # ============================================================ model + baselines
 class ResidualPredictor(nn.Module):
-    """ŷ = SFM_baseline + residual(features). Matches the trained `residual_predictor.pt`."""
+    """ŷ = SFM_baseline + residual(features). Matches the trained `residual_predictor_k1.pt`."""
     def __init__(self, in_dim=FEAT_DIM_TREAT, out_dim=FUTURE * 2, hidden=128):
         super().__init__()
         self.net = nn.Sequential(
@@ -149,7 +149,7 @@ class PeRoIController:
     """Simulator-free PeRoI MPC controller. See module docstring for the loop contract.
 
     Args:
-        ckpt: path to residual_predictor.pt (the trained model).
+        ckpt: path to residual_predictor_k1.pt (the trained model).
         robot_radius, ped_radius: body radii (m); clearance is measured surface-to-surface.
         v_max: max commanded speed (m/s) — keep low for first real-robot tests.
         mode: "residual" (trained predictor, default), "sfm" (physics baseline), or "cv" (constant

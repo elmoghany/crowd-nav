@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+title: "crowd-nav: anticipatory social navigation controller"
+message: "If you use this software or the released models, please cite the paper below."
+type: software
+authors:
+  - family-names: Elmoghany
+    given-names: Mohamed
+repository-code: "https://github.com/elmoghany/crowd-nav"
+url: "https://huggingface.co/elmoghany/crowd-nav"
+license: MIT
+abstract: >-
+  A simulator-free social-navigation controller that predicts how each nearby pedestrian will
+  respond to the robot's candidate plan, then selects the plan by optimization. Ships trained
+  human-response models and a one-command install check.

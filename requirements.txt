@@ -1,2 +1,3 @@
 torch>=1.13
 numpy>=1.21
+huggingface_hub>=0.20   # weight download; drop it if you ship weights yourself

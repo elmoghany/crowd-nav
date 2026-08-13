@@ -2,7 +2,7 @@
 No-robot sanity check: run the PeRoI controller on a scripted scene and print the commanded velocity.
 Use this to confirm the install (torch + numpy + the weights) works before wiring it to a real robot.
 
-    python demo_sanity.py --ckpt residual_predictor.pt
+    python demo_sanity.py --ckpt residual_predictor_k1.pt
 
 Scene: the robot starts at (0,0) heading to a goal at (8,0); one pedestrian walks head-on toward it
 down the centre line. A correct controller should steer laterally (non-zero vy) to open a gap while
@@ -11,16 +11,19 @@ still making forward progress (positive vx), and never drive the robot straight 
 import argparse
 import numpy as np
 from peroi_controller import PeRoIController
+from quickstart import get_weights
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ckpt", default="residual_predictor.pt")
+    ap.add_argument("--ckpt", default=None,
+                    help="weights file; default fetches residual_predictor_k1.pt from "
+                         "huggingface.co/elmoghany/crowd-nav")
     ap.add_argument("--mode", default="residual", choices=["residual", "sfm", "cv"])
     ap.add_argument("--steps", type=int, default=40)
     args = ap.parse_args()
 
-    ctrl = PeRoIController(args.ckpt if args.mode == "residual" else None,
+    ctrl = PeRoIController(get_weights(args.ckpt) if args.mode == "residual" else None,
                           mode=args.mode, robot_radius=0.30, ped_radius=0.25, v_max=0.8)
     ctrl.reset()
     dt = 0.25

@@ -48,10 +48,10 @@ The entire integration, from `examples/minimal.py`:
 
 ```python
 from huggingface_hub import hf_hub_download
-from peroi_controller import PeRoIController
+from crowd_nav import CrowdNavController as Controller   # or: from peroi_controller import PeRoIController
 
 ckpt = hf_hub_download("elmoghany/crowd-nav", "residual_predictor_k1.pt")
-ctrl = PeRoIController(ckpt, robot_radius=0.30, ped_radius=0.25, v_max=0.6)
+ctrl = Controller(ckpt, robot_radius=0.30, ped_radius=0.25, v_max=0.6)
 
 goal = (8.0, 0.0)                       # world frame, metres
 
@@ -153,5 +153,8 @@ The method: predict each person's response to the robot's *candidate* action, th
 (full controller with the convex-QP planner, Isaac Sim benchmarks, paper) is
 [elmoghany/crowd-nav-legacy](https://github.com/elmoghany/crowd-nav-legacy); results and videos at
 [elmoghany.com/crowd-nav-3](https://elmoghany.com/crowd-nav-3/).
+
+**Citing this work:** see `CITATION.cff`. **Contributing:** CI runs an import + physics-mode
+smoke test on Python 3.9 and 3.12 for every push, so a PR that breaks the API fails immediately.
 
 MIT licensed. Issues and questions welcome.

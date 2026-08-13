@@ -1,0 +1,41 @@
+name: smoke
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: Import and run without weights (physics mode)
+        # No checkpoint needed: mode="sfm" exercises the planner, the feature pipeline and the
+        # rollout. Catches the breakages that actually happen -- syntax, imports, API drift.
+        run: |
+          python - <<'PY'
+          import numpy as np
+          from crowd_nav import CrowdNavController          # alias must stay wired
+          from peroi_controller import PeRoIController      # canonical name
+          assert CrowdNavController is PeRoIController
+
+          ctrl = PeRoIController(mode="sfm", v_max=0.8)
+          robot, goal = np.array([0.0, 0.0]), (8.0, 0.0)
+          people = {1: (5.0, 0.0), 2: (6.2, -1.0)}
+          for _ in range(60):
+              vx, vy = ctrl.step(robot, goal, people, dt=0.1)
+              robot = robot + np.array([vx, vy]) * 0.1
+              people = {k: (v[0] - 0.11, v[1]) for k, v in people.items()}
+          assert np.isfinite([vx, vy]).all(), "non-finite command"
+          assert np.hypot(vx, vy) <= 0.8 + 1e-6, "speed cap violated"
+          assert robot[0] > 1.0, f"no forward progress: {robot}"
+          print(f"OK  robot={robot.round(2)}  last command=({vx:+.2f},{vy:+.2f})")
+          PY
+      - name: Examples compile
+        run: python -m py_compile quickstart.py demo_sanity.py ros_node.py examples/*.py

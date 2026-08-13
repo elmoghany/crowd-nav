@@ -13,8 +13,8 @@ Output:
   - geometry_msgs/Twist on /cmd_vel. World-frame (vx,vy) from the controller is rotated into the base
     frame using the robot yaw; if your base is differential-drive, see `to_diff_drive`.
 
-Run:  ROS1:  rosrun peroi ros_node.py _ckpt:=/abs/path/residual_predictor.pt
-      ROS2:  ros2 run peroi ros_node --ros-args -p ckpt:=/abs/path/residual_predictor.pt
+Run:  ROS1:  rosrun peroi ros_node.py _ckpt:=/abs/path/residual_predictor_k1.pt
+      ROS2:  ros2 run peroi ros_node --ros-args -p ckpt:=/abs/path/residual_predictor_k1.pt
 """
 import math
 import numpy as np
@@ -77,7 +77,7 @@ def build_ros1(ckpt, v_max, holonomic):
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ckpt", default="residual_predictor.pt")
+    ap.add_argument("--ckpt", default="residual_predictor_k1.pt")
     ap.add_argument("--v_max", type=float, default=0.6)
     ap.add_argument("--holonomic", action="store_true", help="base can strafe (vx,vy); else diff-drive")
     args, _ = ap.parse_known_args()
