@@ -1,129 +1,157 @@
-# PeRoI controller — social navigation on a real robot
+# crowd-nav — a drop-in social-navigation controller for real robots
 
-A **drop-in, simulator-free controller** that makes a mobile robot navigate a crowd *gently*: it
-**anticipates how each nearby person will react to the robot** with a learned action-conditioned
-predictor (a NeuRoSFM residual trained on real robot–human interaction data), and plans around them
-with a short-horizon MPC. In benchmarks the same planner using this predictor perturbs the crowd
-**~27% less** than using a constant-velocity or social-force model, and ~2× less than reactive
-controllers (ORCA / social-force). Results + videos: **https://elmoghany.com/crowd-nav**.
+Your robot has a goal, a position, and a list of tracked people. This gives you a velocity command
+that gets to the goal **while anticipating how each person will react to the robot** — rather than
+treating them as moving obstacles and freezing when they come close.
 
-This repo is everything you need to run it on a robot: **one dependency-light file**
-(`peroi_controller.py`, needs only `torch` + `numpy`) plus the trained weights
-(`residual_predictor.pt`, ~90 KB). No MuJoCo, no ROS required to use the core.
+One file, no simulator, no ROS dependency, CPU-only, ~3 ms per decision.
+
+```python
+vx, vy = ctrl.step(robot_xy, goal_xy, {track_id: (x, y), ...}, dt)
+```
 
 ---
 
-## 1. Install
+## 60-second start
 
 ```bash
-pip install torch numpy huggingface_hub   # CPU is fine — the model is a tiny MLP, <1 ms/step
+git clone https://github.com/elmoghany/crowd-nav && cd crowd-nav
+pip install -r requirements.txt huggingface_hub
+python quickstart.py
 ```
 
-Then get the trained weights from the **private model repo**
-[`elmoghany/peroi-controller`](https://huggingface.co/elmoghany/peroi-controller) on Hugging Face
-(ask the owner for access, then `hf auth login`):
+`quickstart.py` downloads the weights, runs two scripted scenes with no robot and no simulator, and
+tells you whether the output looks right. Expected result:
 
-```bash
-hf download elmoghany/peroi-controller residual_predictor.pt --local-dir .
+```
+  HEAD-ON - one person walking straight at the robot
+    0.0 ( 0.08, 0.00) ( 0.80, 0.00)      5.26 m away
+    2.0 ( 1.29,-0.70) ( 0.49,-0.56)      1.95 m away     <- steers aside early
+    4.0 ( 2.62,-1.27) ( 0.78, 0.18)      1.15 m away
+   10.5  goal reached
+  -> reached=True  min surface clearance=+0.76 m  path=8.4 m
+
+  verdict
+    head-on   clearance +0.76 m  reached=True
+    crossing  clearance +1.15 m  reached=True
+    install OK - the controller anticipates and keeps a gap.
 ```
 
-Keep `residual_predictor.pt` next to `peroi_controller.py`.
+The lateral command appears **while the person is still 2 m away** — that is the anticipation doing
+its job. A reactive planner produces zero lateral motion until the gap closes, then swerves or stops.
 
-## 2. Sanity check (no robot)
+---
 
-```bash
-python demo_sanity.py --ckpt residual_predictor.pt
-```
-It runs a scripted head-on encounter and prints the commanded velocity — you should see the robot make
-forward progress (`vx>0`) while steering aside (`vy≠0`) to open a gap, never driving into the person.
-This confirms `torch`, `numpy`, and the weights load correctly.
+## Use it in your stack
 
-## 3. Wire it into your control loop
+The entire integration, from `examples/minimal.py`:
 
 ```python
+from huggingface_hub import hf_hub_download
 from peroi_controller import PeRoIController
 
-ctrl = PeRoIController(
-    "residual_predictor.pt",
-    robot_radius=0.30,   # your robot's footprint radius (m)
-    ped_radius=0.25,     # assumed person radius (m)
-    v_max=0.6,           # START LOW for first real tests (m/s)
-)
-ctrl.reset()
+ckpt = hf_hub_download("elmoghany/crowd-nav", "residual_predictor_k1.pt")
+ctrl = PeRoIController(ckpt, robot_radius=0.30, ped_radius=0.25, v_max=0.6)
+
+goal = (8.0, 0.0)                       # world frame, metres
 
 while running:
-    # ALL in one fixed world frame (your SLAM/`map` frame), metres:
-    robot_xy = (rx, ry)                                   # robot position from localization
-    goal_xy  = (gx, gy)                                   # where you want it to go
-    peds     = {track_id: (px, py) for ...}              # tracked people (dict of id -> (x,y))
-
-    vx, vy = ctrl.step(robot_xy, goal_xy, peds, dt=loop_dt)   # desired velocity, WORLD frame (m/s)
-    send_to_base(vx, vy)                                  # see "Command types" below
+    robot_xy = my_localization()        # (x, y) world frame
+    people   = my_tracker()             # {track_id: (x, y)}, SAME frame
+    vx, vy   = ctrl.step(robot_xy, goal, people, dt=elapsed_since_last_call)
+    send_to_base(vx, vy)                # world-frame velocity, m/s
 ```
 
-### The contract
-- **One world frame.** Robot pose, goal, and every pedestrian position must be in the **same fixed
-  frame** (e.g. `map`), in **metres**. Don't mix base-frame and map-frame.
-- **Pedestrian tracks.** Pass `{track_id: (x, y)}`. IDs must be **stable across calls** (that's how the
-  predictor accumulates each person's 1 s of history). Any tracker that outputs IDs works
-  (SPENCER, ZED/OAK people, a LiDAR leg/DR-SPAAM tracker, ...). A plain `list[(x,y)]` also works **iff**
-  your tracker keeps a stable order.
-- **Rate.** Call `step()` at **≥ 4 Hz** and pass the real `dt` (seconds since your last call). Internally
-  it samples/replans every **0.25 s** and holds the command between ticks, so calling faster is fine and
-  just makes the held command fresher. The predictor observes 1 s of history and predicts 2 s ahead.
-- **Output.** `(vx, vy)` is a **world-frame** velocity. Convert per your base:
+**Differential-drive bases** need the command rotated into the body frame:
 
-### Command types
-- **Holonomic base** (can strafe): rotate the world-frame `(vx,vy)` into the base frame by the robot yaw:
-  `vx_base = cos(-yaw)*vx - sin(-yaw)*vy`, `vy_base = sin(-yaw)*vx + cos(-yaw)*vy` → `geometry_msgs/Twist`.
-- **Differential-drive base** (can't strafe): convert to `(v, omega)` — drive forward, turn toward the
-  desired direction. `ros_node.py::to_diff_drive()` does exactly this.
-- A ready-to-adapt **ROS 1 / ROS 2 node** is in `ros_node.py` (subscribes odom + tracked people + goal,
-  publishes `/cmd_vel`). The two things you customize are the tracked-people callback and the base type.
+```python
+import math
+v = math.hypot(vx, vy)
+yaw_err = math.atan2(vy, vx) - robot_yaw
+yaw_err = (yaw_err + math.pi) % (2 * math.pi) - math.pi     # wrap to [-pi, pi]
+cmd.linear.x  = v * math.cos(yaw_err)                        # back off while turning
+cmd.angular.z = 1.5 * yaw_err
+```
 
-## 4. Safety (read this)
+**ROS 1 or ROS 2**: `ros_node.py` is a working reference node — subscribe your odometry, your
+tracker, and a goal topic; it publishes `geometry_msgs/Twist`. Adapt two callbacks and you are done.
 
-This is a **social-navigation planner, not a safety layer.** Keep underneath it:
-- your platform **e-stop** and **collision monitor** (bumpers / safety LiDAR),
-- a hard **speed cap** (`v_max`) — start at 0.4–0.6 m/s,
-- your own **static-obstacle avoidance** (walls, furniture): PeRoI plans around *people*, not the map.
-  Either run it on top of your local planner/costmap, or pass a corridor (below) for simple hallways.
+**Real trackers drop and swap IDs.** `examples/with_tracker.py` runs a scene with jitter, a 3-frame
+dropout and an ID swap so you can see exactly what the controller does through each (short answer:
+it keeps moving; a new ID just costs that person ~1 s of history).
 
-## 5. Tuning
+---
 
-| arg | meaning | default |
+## Which weights
+
+| file | use it when |
+|---|---|
+| **`residual_predictor_k1.pt`** | **default.** Physics prior + learned correction, matched to this controller's deployment prior. |
+| `residual_predictor.pt` | never — kept for reproducibility only. Trained against a *zero* robot-force prior while this controller deploys at 1.0, so the correction fixes an error that is not there. It was a real bug of ours; `_k1` is the fix. |
+| `linres_head.pt` | not used by this package. It is the strongest model in our research stack, but its advantage (an exactly-linear response, enabling a convex QP planner) only pays off with that planner — this package ships the simpler velocity-grid planner. |
+
+All three: [huggingface.co/elmoghany/crowd-nav](https://huggingface.co/elmoghany/crowd-nav).
+
+---
+
+## Tuning for your robot
+
+Start conservative and raise `v_max` once you trust it.
+
+| argument | default | what it does |
 |---|---|---|
-| `v_max` | max commanded speed (m/s) | 0.8 |
-| `comfort` | personal-space radius it tries to keep (m) | 0.8 |
-| `safety` | hard min surface clearance; candidates closer are rejected (m) | 0.30 |
-| `consider_r` / `k_near` | radius / max number of people it plans around | 4.5 m / 6 |
-| `w_clear` / `w_progress` / `w_smooth` | cost weights: clearance vs goal progress vs smoothness | 6 / 1 / 0.3 |
-| `mode` | `"residual"` (trained, default), `"sfm"`, or `"cv"` — same planner, different anticipation | residual |
+| `v_max` | `0.8` | speed cap (m/s). **Start at 0.4–0.6 on a real robot.** |
+| `robot_radius`, `ped_radius` | `0.30`, `0.25` | body radii; clearance is measured surface-to-surface |
+| `safety` | `0.30` | extra clearance the planner tries to keep beyond the two bodies (m) |
+| `comfort` | `0.8` | distance (m) under which closeness starts costing — raise it to be more polite |
+| `mode` | `"residual"` | `"sfm"` (physics only) or `"cv"` (straight lines) — same planner, dumber anticipation. Useful for A/B-ing whether the learned model is helping on *your* robot |
+| `hazards` | `None` | list of polygons `[[x,y],...]` to avoid and not herd people into (stairs, docks, roads) |
+| `half_width`, `corridor_axis` | `None` | keep-in for a known corridor |
 
-Optional extras:
-- **Hazard zones** — pass `hazards=[[[x,y],...], ...]` (polygons in world frame) to keep the robot out
-  of, and to avoid herding people into, floor hazards (potholes, door thresholds).
-- **Corridor keep-in** — pass `half_width=` (m) and `corridor_axis=(x,y)` (unit vector along the hall)
-  for a simple straight corridor, so the planner keeps the robot inside it.
-
-## 6. What's in here
+```python
+ctrl = PeRoIController(ckpt, v_max=0.5, safety=0.40, comfort=1.0,
+                       hazards=[[[2,1],[4,1],[4,3],[2,3]]])      # a stairwell, world frame
 ```
-peroi_controller.py    # the controller (self-contained: predictor + SFM + MPC). torch + numpy only.
-demo_sanity.py         # no-robot check
-ros_node.py            # ROS 1/2 example node
-requirements.txt
-```
-The trained weights (`residual_predictor.pt`, ~90 KB) are hosted separately on the private Hugging Face
-repo **[elmoghany/peroi-controller](https://huggingface.co/elmoghany/peroi-controller)** — download them
-as shown in step 1.
 
-## Model card / provenance
-The predictor is a NeuRoSFM residual (`ŷ = SocialForce + learned_correction`) trained on the real
-**PeRoI** robot–human interaction dataset (3 robot conditions, per-person avoidance/neutral/attraction
-labels). On held-out real recordings it cuts pedestrian-prediction ADE ~20% over constant-velocity and
-~43% over social-force, and its predicted robot-effect is larger for people humans labelled *influenced*
-(a causal check). Full write-up, metrics, and per-metric videos: **https://elmoghany.com/crowd-nav**.
-Known limitation: trained on slow-robot data, so it is out-of-distribution (degrades) in very dense
-fast crowds — keep `v_max` modest and your safety layer active.
+---
 
-Questions: Mohamed Elmoghany (Cornell). License: MIT.
+## What it actually does each cycle
+
+1. Keeps 1 second of history for the 6 nearest people within 4.5 m.
+2. Rolls out ~20 candidate velocities for the robot, 2 seconds ahead.
+3. For each candidate, predicts **how those people would respond to that specific robot motion** —
+   a social-force prior plus a neural correction trained on real robot–pedestrian recordings.
+4. Scores candidates on progress, clearance, comfort, smoothness (plus walls/hazards) and commands
+   the winner. Repeats at 4 Hz.
+
+Step 3 is the part that differs from a normal local planner: the people in the forecast **react to
+the plan being considered**, so the controller can prefer a path that opens a gap instead of one
+that closes it.
+
+---
+
+## Troubleshooting
+
+| symptom | cause |
+|---|---|
+| Robot freezes in a crowd | `v_max` too low for the density, or `safety`/`comfort` too large. Also check `dt` — passing a wrong `dt` breaks the internal 0.25 s clock. |
+| Commands look mirrored | People are in the **body frame**, not the world frame. Everything you pass must share one frame. |
+| Jerky commands | Your tracker IDs are unstable, so histories keep resetting. Check with `examples/with_tracker.py` as a reference for what stable-ID behaviour looks like. |
+| No lateral anticipation | You are on `mode="cv"`, or the weights failed to load — the constructor raises if `mode="residual"` and no checkpoint is given, so check startup logs. |
+| Works in `quickstart.py`, not on the robot | Almost always frames or `dt`. Log `robot_xy`, one person's `(x, y)` and `dt` for 2 seconds and sanity-check by hand. |
+
+**This is a local planner, not a safety system.** It has no formal collision guarantee, no emergency
+stop, and no obstacle avoidance for anything that is not a tracked person. Keep your own safety
+layer (bumper, lidar e-stop, speed limiter) underneath it.
+
+---
+
+## Background
+
+The method: predict each person's response to the robot's *candidate* action, then choose the action
+— rather than predicting people once and planning around the forecast. The research repository
+(full controller with the convex-QP planner, Isaac Sim benchmarks, paper) is
+[elmoghany/crowd-nav-legacy](https://github.com/elmoghany/crowd-nav-legacy); results and videos at
+[elmoghany.com/crowd-nav-3](https://elmoghany.com/crowd-nav-3/).
+
+MIT licensed. Issues and questions welcome.
