@@ -15,7 +15,9 @@ DESIRED_SPEED = 1.3      # m/s, comfortable walking pace
 SPEED_CAP = 1.8          # m/s
 RELAX = 0.5              # s, goal-force relaxation time
 A_PED, B_PED, R_PED = 2.0, 0.4, 2.0        # strength, length scale, cutoff radius (m)
-A_ROB, B_ROB, R_ROB = 1.0, 0.5, 3.0
+A_ROB, B_ROB, R_ROB = 4.0, 0.6, 3.5     # robot repulsion. Literature social-force
+                                        # values for a robot sit near this; 1.0 was
+                                        # too weak for --compliance to do anything.
 A_WALL, B_WALL = 4.0, 0.25
 
 

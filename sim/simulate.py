@@ -107,7 +107,7 @@ def run(args):
     rr = args.robot_radius + 0.25
     robot = start.copy()
     yaw, dt, t = 0.0, args.dt, 0.0
-    frames, plan_ms = [], []
+    frames, plan_ms, dev_trace = [], [], []
     min_clear, contacts, reached = 1e9, 0, False
     renderer, cam = None, None
     if args.video:
@@ -135,6 +135,9 @@ def run(args):
             yaw = math.atan2(vy, vx)
         crowd.step(robot, dt)
         ghost.step(None, dt)
+        # deviation accumulated over the WHOLE episode: the final-instant gap washes out once
+        # people have walked past the robot and re-converged on their goals
+        dev_trace.append(float(np.linalg.norm(crowd.p - ghost.p, axis=1).mean()))
 
         gaps = np.linalg.norm(crowd.p - robot, axis=1) - rr
         min_clear = min(min_clear, float(gaps.min()))
@@ -160,12 +163,14 @@ def run(args):
         t += dt
         step_i += 1
 
-    deviation = float(np.linalg.norm(crowd.p - ghost.p, axis=1).mean())
+    deviation = float(np.mean(dev_trace)) if dev_trace else 0.0
+    peak_dev = float(np.max(dev_trace)) if dev_trace else 0.0
     res = {
         "scenario": sc.get("name", args.scenario), "mode": args.mode,
         "reached": bool(reached), "sim_time_s": round(t, 2),
         "min_clearance_m": round(min_clear, 3), "contact_steps": int(contacts),
         "mean_ped_deviation_m": round(deviation, 3),
+        "peak_ped_deviation_m": round(peak_dev, 3),
         "plan_ms_mean": round(float(np.mean(plan_ms)), 2),
         "plan_ms_p95": round(float(np.percentile(plan_ms, 95)), 2),
         "pedestrians": len(peds), "compliance": args.compliance,

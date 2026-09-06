@@ -1,17 +1,37 @@
-# A 1.6 m doorway both the robot and an oncoming group must pass through.
-# The hardest of the three: someone has to give way.
+# A 1.6 m doorway that the robot and an oncoming group of 12 must share.
+# The hardest of the three: at low --compliance nobody gives way and the robot has to wait.
 name: doorway
 time_limit: 90.0
 robot:
   start: [-10.0, 0.0]
-  goal:  [10.0, 0.0]
+  goal: [10.0, 0.0]
 walls:
-  - [0.0,  3.0, 14.0, 0.15]     # corridor sides
-  - [0.0, -3.0, 14.0, 0.15]
-  - [0.0,  2.0,  0.4, 1.15]     # the pinch: leaves a 1.6 m gap on the centreline
-  - [0.0, -2.0,  0.4, 1.15]
+- [0.0, 3.0, 14.0, 0.15]
+- [0.0, -3.0, 14.0, 0.15]
+- [0.0, 2.0, 0.4, 1.15]
+- [0.0, -2.0, 0.4, 1.15]
 pedestrians:
-  - {pos: [3.0,  0.3], goal: [-12.0,  0.4]}
-  - {pos: [4.2, -0.5], goal: [-12.0, -0.3]}
-  - {pos: [5.5,  0.7], goal: [-12.0,  0.9]}
-  - {pos: [6.8, -0.2], goal: [-12.0, -0.9]}
+- pos: [3.0, 0.3]
+  goal: [-12.0, 0.36]
+- pos: [4.0, -0.5]
+  goal: [-12.0, -0.6]
+- pos: [5.0, 0.7]
+  goal: [-12.0, 0.84]
+- pos: [5.8, -0.2]
+  goal: [-12.0, -0.24]
+- pos: [6.6, 0.9]
+  goal: [-12.0, 1.08]
+- pos: [7.4, -0.8]
+  goal: [-12.0, -0.96]
+- pos: [8.2, 0.1]
+  goal: [-12.0, 0.12]
+- pos: [9.0, -1.0]
+  goal: [-12.0, -1.2]
+- pos: [9.8, 0.5]
+  goal: [-12.0, 0.6]
+- pos: [10.6, -0.4]
+  goal: [-12.0, -0.48]
+- pos: [11.4, 0.8]
+  goal: [-12.0, 0.96]
+- pos: [12.2, -0.6]
+  goal: [-12.0, -0.72]

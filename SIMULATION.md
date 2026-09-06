@@ -25,6 +25,16 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 python -m pip install --upgrade pip
 ```
 
+**If that fails with `ensurepip is not available`** (common on Debian/Ubuntu, and exactly what
+happened on the machine this guide was tested on) you do not need sudo -- build the venv without
+pip and bootstrap it:
+
+```bash
+python3 -m venv --without-pip .venv
+source .venv/bin/activate
+curl -sS https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python get-pip.py
+```
+
 ## Step 3 — Install the simulator
 
 ```bash
@@ -39,7 +49,7 @@ python -c "import mujoco, torch; print('mujoco', mujoco.__version__, '| torch', 
 ```
 
 ```
-mujoco 3.12.0 | torch 2.5.1
+mujoco 3.12.0 | torch 2.14.0+cu130
 ```
 
 ## Step 4 — Run your first simulation (no weights, no video)
@@ -53,11 +63,12 @@ python -m sim.simulate --scenario corridor
   mode                   sfm
   reached                True
   sim_time_s             31.2
-  min_clearance_m        0.675
+  min_clearance_m        0.732
   contact_steps          0
-  mean_ped_deviation_m   0.021
-  plan_ms_mean           3.67
-  plan_ms_p95            35.94
+  mean_ped_deviation_m   0.03
+  peak_ped_deviation_m   0.081
+  plan_ms_mean           3.58
+  plan_ms_p95            35.64
   pedestrians            6
   compliance             1.0
 
@@ -71,7 +82,7 @@ What those numbers mean:
 | `reached` | did the robot get within 0.5 m of the goal before the time limit |
 | `min_clearance_m` | closest surface-to-surface gap to any person all episode (negative = contact) |
 | `contact_steps` | number of simulation steps spent overlapping a person |
-| `mean_ped_deviation_m` | how far the crowd ended up from where it would have walked **with no robot present** — the robot's causal footprint, computed by running a second, robot-free copy of the same crowd |
+| `mean_ped_deviation_m` | how far the crowd is from where it would have walked **with no robot present**, averaged over the episode — the robot's causal footprint, computed by running a second, robot-free copy of the same crowd. `peak_` is its maximum |
 | `plan_ms_*` | wall-clock per decision. This is the real-time budget check |
 
 ## Step 5 — Record a video
@@ -113,7 +124,7 @@ it plans.
 
 ## Step 8 — Make the crowd less cooperative
 
-The crowd yields by default. Turn that down to see the difference:
+The crowd yields to the robot by default. `--compliance` scales how strongly people react to it:
 
 ```bash
 python -m sim.simulate --scenario doorway --compliance 1.0     # cooperative (default)
@@ -121,8 +132,19 @@ python -m sim.simulate --scenario doorway --compliance 0.3     # reluctant
 python -m sim.simulate --scenario doorway --compliance 0.1     # essentially ignores the robot
 ```
 
-This is the single most informative knob in the whole package. A controller that only works at
-`compliance 1.0` will not work in a real hallway.
+Measured on the `doorway` scenario (12 oncoming people, 1.6 m gap):
+
+| compliance | reached | min clearance | mean ped deviation |
+|---|---|---|---|
+| 1.0 | yes | 0.79 m | 0.034 m |
+| 0.3 | yes | 0.80 m | 0.021 m |
+| 0.1 | yes | 0.78 m | 0.009 m |
+
+Read that honestly: what changes is **how much the crowd gets out of the way** (a 4x spread in
+deviation), not whether the robot succeeds — in these three demo scenarios it gets through either
+way, by going around people rather than through them. To build a scenario where compliance decides
+success or failure, narrow the corridor and add people until there is no gap to thread; the
+`dense` recipe below is the starting point.
 
 ---
 
@@ -219,6 +241,7 @@ full barrier however tall it is drawn.
 | `mode 'residual' needs weights` | `pip install huggingface_hub`, or pass `--ckpt`, or use `--mode sfm` |
 | Robot reaches but the crowd scatters | expected at low `--compliance`; look at `mean_ped_deviation_m` |
 | Runs slowly | drop `--video` (rendering dominates), or `--width 640 --height 360` |
+| `OSError: [Errno 28] No space left on device` while installing | your `/tmp` is full (shared servers, often). `export TMPDIR=$PWD/tmp && mkdir -p $PWD/tmp` and reinstall |
 
 ## Honest limits
 
