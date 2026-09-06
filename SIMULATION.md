@@ -87,6 +87,8 @@ What those numbers mean:
 
 ## Step 5 — Record a video
 
+(Working on a Linux server and want to watch from your laptop instead? `--serve` streams the run to a browser -- see **[REMOTE.md](REMOTE.md)**.)
+
 ```bash
 python -m sim.simulate --scenario corridor --video corridor.mp4 --camera top
 ```
