@@ -12,6 +12,13 @@ vx, vy = ctrl.step(robot_xy, goal_xy, {track_id: (x, y), ...}, dt)
 
 ---
 
+## Two ways in
+
+| you want to | go to |
+|---|---|
+| **run a simulation** — robot + crowd + video, no hardware | **[SIMULATION.md](SIMULATION.md)** (command by command, ~5 min) |
+| put the controller on a real robot | this page |
+
 ## 60-second start
 
 ```bash

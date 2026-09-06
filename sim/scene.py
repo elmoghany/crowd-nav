@@ -8,7 +8,8 @@ import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.abspath(os.path.join(HERE, "..", "assets"))
 
-WALL_H = 0.55      # half-height. Waist-high so the camera can see over the walls; the crowd
+WALL_H = 0.55      # half-height. Waist-high AND semi-transparent so nothing (least of all
+                   # the robot squeezing through a doorway) is ever hidden; the crowd
                    # model treats a wall as a full barrier however tall it is drawn.
 
 
@@ -30,7 +31,7 @@ PED_BODY = """    <body name="ped{i}" pos="{x} {y} 0">
 """
 
 WALL_GEOM = ('    <geom name="wall{i}" type="box" pos="{cx} {cy} {h}" size="{hx} {hy} {h}" '
-             'rgba="0.30 0.33 0.38 1" contype="4" conaffinity="0"/>\n')
+             'rgba="0.30 0.33 0.38 0.55" contype="4" conaffinity="0"/>\n')
 
 
 def build(scenario, out_path=None):
