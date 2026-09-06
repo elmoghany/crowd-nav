@@ -109,8 +109,16 @@ def run(args):
     yaw, dt, t = 0.0, args.dt, 0.0
     frames, plan_ms, dev_trace = [], [], []
     min_clear, contacts, reached = 1e9, 0, False
-    renderer, cam = None, None
-    if args.video:
+    renderer, cam, server = None, None, None
+    if args.serve:
+        from sim.stream import FrameServer
+        server = FrameServer(args.serve)
+        print("live view:")
+        for u in server.urls():
+            print("   ", u)
+        print("    (from another machine use the host/IP line; see REMOTE.md)")
+        print()
+    if args.video or args.serve:
         renderer = mujoco.Renderer(model, height=args.height, width=args.width)
         cam = mujoco.MjvCamera()
         cam.type = mujoco.mjtCamera.mjCAMERA_FREE
@@ -155,7 +163,13 @@ def run(args):
         if renderer is not None and step_i % frame_every == 0:
             cam.lookat[:] = [robot[0], robot[1], 0.8]
             renderer.update_scene(data, camera=cam)
-            frames.append(renderer.render())
+            rgb = renderer.render()
+            if args.video:
+                frames.append(rgb)
+            if server is not None:
+                server.publish(rgb)
+                if args.realtime:
+                    time.sleep(max(0.0, (1.0 / args.fps) - (time.perf_counter() - t0)))
 
         if float(np.linalg.norm(goal - robot)) < 0.5:
             reached = True
@@ -175,6 +189,13 @@ def run(args):
         "plan_ms_p95": round(float(np.percentile(plan_ms, 95)), 2),
         "pedestrians": len(peds), "compliance": args.compliance,
     }
+    if server is not None:
+        print()
+        print("  simulation finished -- the live view freezes on the last frame.")
+        if args.hold:
+            print("  holding the page open for {}s (Ctrl-C to stop)".format(args.hold))
+            time.sleep(args.hold)
+        server.close()
     if renderer is not None:
         if frames:
             import imageio.v2 as imageio
@@ -207,6 +228,12 @@ def main():
     ap.add_argument("--width", type=int, default=960)
     ap.add_argument("--height", type=int, default=540)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--serve", type=int, default=0, metavar="PORT",
+                    help="stream the run to a browser on this port (watch a remote run live)")
+    ap.add_argument("--realtime", action="store_true",
+                    help="with --serve, pace the simulation to wall-clock so it looks natural")
+    ap.add_argument("--hold", type=int, default=0, metavar="SECONDS",
+                    help="with --serve, keep the page alive this long after the run ends")
     args = ap.parse_args()
 
     res = run(args)
