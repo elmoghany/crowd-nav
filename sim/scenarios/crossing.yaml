@@ -1,0 +1,13 @@
+# Open space, a stream of people cutting across the robot's path from the right.
+name: crossing
+time_limit: 60.0
+robot:
+  start: [-10.0, 0.0]
+  goal:  [10.0, 0.0]
+walls: []
+pedestrians:
+  - {pos: [-1.0, -8.0], goal: [ 1.0, 10.0]}
+  - {pos: [ 1.0, -9.5], goal: [ 3.0, 10.0]}
+  - {pos: [ 3.0, -8.5], goal: [ 5.0, 10.0]}
+  - {pos: [ 5.0, -10.0], goal: [ 7.0, 10.0]}
+  - {pos: [ 0.0, -12.0], goal: [ 2.0, 10.0]}

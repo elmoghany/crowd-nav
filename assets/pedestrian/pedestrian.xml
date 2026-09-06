@@ -1,0 +1,31 @@
+<!--
+  Pedestrian model for the crowd-nav simulator.
+
+  Authored for this project (MIT, same licence as the repository) -- deliberately NOT a
+  third-party human asset, so it can be redistributed freely. It is a kinematic capsule
+  figure: the simulator drives its x-y position directly from the social-force crowd model,
+  so the body only has to look like a person and collide like one, not walk by itself.
+
+  Dimensions: 1.72 m tall, 0.25 m body radius (shoulder half-width), matching the pedestrian
+  radius the controller assumes by default.
+
+  Include it from a scene with:
+      <include file="../assets/pedestrian/pedestrian.xml"/>
+  and instantiate copies via the <body> template below (see sim/build_scene.py, which stamps
+  one copy per pedestrian with a unique name).
+-->
+<mujoco model="pedestrian">
+  <default>
+    <default class="ped">
+      <geom type="capsule" density="985" friction="0.9 0.005 0.0001"
+            contype="2" conaffinity="1" rgba="0.31 0.42 0.62 1"/>
+      <site rgba="1 0.55 0.15 1" size="0.03"/>
+    </default>
+  </default>
+
+  <asset>
+    <material name="ped_skin"  rgba="0.85 0.70 0.58 1"/>
+    <material name="ped_shirt" rgba="0.31 0.42 0.62 1"/>
+    <material name="ped_legs"  rgba="0.22 0.25 0.32 1"/>
+  </asset>
+</mujoco>

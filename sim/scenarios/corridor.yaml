@@ -1,0 +1,22 @@
+# A 4.5 m wide corridor with people walking toward the robot.
+# Copy this file, edit the numbers, and run it -- that is how you make your own scenario.
+name: corridor
+time_limit: 60.0
+
+robot:
+  start: [-12.0, 0.0]     # world frame, metres
+  goal:  [12.0, 0.0]
+
+# walls are [centre_x, centre_y, half_size_x, half_size_y]
+walls:
+  - [0.0,  2.4, 16.0, 0.15]
+  - [0.0, -2.4, 16.0, 0.15]
+
+# each pedestrian: where they start, where they are going
+pedestrians:
+  - {pos: [ 4.0,  0.6], goal: [-14.0,  0.5]}
+  - {pos: [ 6.5, -0.8], goal: [-14.0, -0.6]}
+  - {pos: [ 9.0,  0.2], goal: [-14.0,  1.0]}
+  - {pos: [11.5, -0.4], goal: [-14.0, -1.1]}
+  - {pos: [14.0,  0.9], goal: [-14.0,  0.2]}
+  - {pos: [16.5, -0.2], goal: [-14.0, -0.8]}

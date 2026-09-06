@@ -2,3 +2,8 @@ __pycache__/
 *.pyc
 residual_predictor.pt
 HF_README.md
+
+# generated scenes
+assets/unitree_go2/_scene_generated.xml
+*.mp4
+.venv/

@@ -1,0 +1,17 @@
+# A 1.6 m doorway both the robot and an oncoming group must pass through.
+# The hardest of the three: someone has to give way.
+name: doorway
+time_limit: 90.0
+robot:
+  start: [-10.0, 0.0]
+  goal:  [10.0, 0.0]
+walls:
+  - [0.0,  3.0, 14.0, 0.15]     # corridor sides
+  - [0.0, -3.0, 14.0, 0.15]
+  - [0.0,  2.0,  0.4, 1.15]     # the pinch: leaves a 1.6 m gap on the centreline
+  - [0.0, -2.0,  0.4, 1.15]
+pedestrians:
+  - {pos: [3.0,  0.3], goal: [-12.0,  0.4]}
+  - {pos: [4.2, -0.5], goal: [-12.0, -0.3]}
+  - {pos: [5.5,  0.7], goal: [-12.0,  0.9]}
+  - {pos: [6.8, -0.2], goal: [-12.0, -0.9]}
