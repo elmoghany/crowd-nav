@@ -377,7 +377,7 @@ and is **private** — request access if you need it. Weights and results are pu
 | No ROS 2 package | `ros_node.py` is a reference node, not an installable package (no `package.xml`, no launch file) |
 | Simulator is MuJoCo-only | the Isaac path is research-repo-only, as above |
 | `linres_head.pt` ships but is unusable here | needs the convex-QP planner listed above |
-| JRDB-derived weights (`_cb_models/*.pt`) not published | dataset licence — retrain from JRDB yourself if you need them |
+| Crowd-behaviour model weights (`_cb_models/*.pt`) not published | our re-implementations of Social-LSTM / Social-GAN, trained on pooled ETH/UCY (plus JRDB-trained variants). They drive the *crowd* in a separate study — the controller and the videos above do not use them. Retrain with `humanmodel/train_cb_models.py` in the research repo. |
 
 ---
 
