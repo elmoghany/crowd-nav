@@ -43,8 +43,8 @@ python -m sim.simulate --scenario doorway --serve 8791 --realtime --hold 300
 ```
 live view:
     http://localhost:8791
-    http://joachims-cpu-02:8791
-    http://128.84.96.55:8791
+    http://<compute-node>:8791
+    http://<node-ip>:8791
 ```
 
 - `--serve PORT` streams MJPEG (plain HTTP, one TCP port, no plugins, no UDP).
@@ -54,15 +54,15 @@ live view:
 ### On a cluster, you need an SSH tunnel
 
 **High ports are firewalled** on the Cornell cluster — the address the program prints is not
-reachable from your laptop even on the VPN (verified: port 22 open, port 8791 refused). Port 22
+reachable from your laptop even on the VPN (verified on our cluster: port 22 open, high ports refused). Port 22
 *is* open, so tunnel through it. From Windows PowerShell:
 
 ```powershell
 # 1. find which node your job is on
-ssh me484@unicorn-login-01.coecis.cornell.edu "squeue -u me484 -o '%.18i %.20j %.20N'"
+ssh <netid>@<your-cluster-login-host> "squeue -u $USER -o '%.18i %.20j %.20N'"
 
 # 2. tunnel that node's port to your laptop (leave this window open)
-ssh -N -L 8791:joachims-cpu-02:8791 me484@unicorn-login-01.coecis.cornell.edu
+ssh -N -L 8791:<compute-node>:8791 <netid>@<your-cluster-login-host>
 
 # 3. open http://localhost:8791 in your browser
 ```
@@ -103,7 +103,7 @@ python -m sim.simulate --scenario doorway --video doorway.mp4
 
 ```powershell
 # on Windows
-scp me484@unicorn-login-01.coecis.cornell.edu:~/crowd-nav/doorway.mp4 .
+scp <netid>@<your-cluster-login-host>:~/crowd-nav/doorway.mp4 .
 ```
 
 ---
