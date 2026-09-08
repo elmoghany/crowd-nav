@@ -377,7 +377,7 @@ and is **private** — request access if you need it. Weights and results are pu
 | No ROS 2 package | `ros_node.py` is a reference node, not an installable package (no `package.xml`, no launch file) |
 | Simulator is MuJoCo-only | the Isaac path is research-repo-only, as above |
 | `linres_head.pt` ships but is unusable here | needs the convex-QP planner listed above |
-| Crowd-behaviour model weights (`_cb_models/*.pt`) not published | our re-implementations of Social-LSTM / Social-GAN, trained on pooled ETH/UCY (plus JRDB-trained variants). They drive the *crowd* in a separate study — the controller and the videos above do not use them. Retrain with `humanmodel/train_cb_models.py` in the research repo. |
+| Crowd-behaviour models — **published, but not used here** | the seven checkpoints under [`crowd_models/`](https://huggingface.co/elmoghany/crowd-nav/tree/main/crowd_models) drive the *pedestrians* in a separate study (our Social-LSTM / Social-GAN / transformer re-implementations, trained on pooled ETH/UCY and on JRDB). The controller and the videos above never load them; the code that does is `humanmodel/` in the research repo. |
 
 ---
 
